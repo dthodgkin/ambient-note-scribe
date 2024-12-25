@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Save } from "lucide-react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -16,14 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Note {
-  id: string;
-  title: string;
-  date: string;
-  content: string;
-  fileName: string;
-}
+import { saveNote, type Note } from "@/services/noteService";
 
 const Index = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -52,38 +45,8 @@ const Index = () => {
     }
 
     try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const todoTxtContent = `x ${formattedDate} ${title}\n${note}`;
-      const fileName = `${formattedDate}-${title.toLowerCase().replace(/\s+/g, "-")}.txt`;
-      
-      // Create a Blob with the content
-      const blob = new Blob([todoTxtContent], { type: "text/plain" });
-      
-      // Create a download link and trigger it
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      // Save to localStorage
-      const newNote: Note = {
-        id: editingNoteId || Date.now().toString(),
-        title,
-        date: formattedDate,
-        content: note,
-        fileName,
-      };
-
-      const updatedNotes = editingNoteId
-        ? notes.map((n) => (n.id === editingNoteId ? newNote : n))
-        : [newNote, ...notes];
-
+      const updatedNotes = await saveNote(title, date, note, editingNoteId, notes);
       setNotes(updatedNotes);
-      localStorage.setItem("ambientNotes", JSON.stringify(updatedNotes));
 
       toast({
         title: editingNoteId ? "Note Updated" : "Note Saved",
@@ -107,7 +70,7 @@ const Index = () => {
   const handleNoteClick = (selectedNote: Note) => {
     setTitle(selectedNote.title);
     setNote(selectedNote.content);
-    setDate(parse(selectedNote.date, "yyyy-MM-dd", new Date()));
+    setDate(new Date(selectedNote.date));
     setEditingNoteId(selectedNote.id);
   };
 
